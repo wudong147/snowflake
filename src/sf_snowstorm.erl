@@ -43,6 +43,7 @@ init([Name]) ->
 	     count = 0, machine = MID}}.
 
 handle_call({set_machine_id, MachineId}, _From, State) ->
+    io:format("Snowflake set machine id: ~p ~n", [MachineId]),
     {noreply, ok, State#st{machine = MachineId}};
 
 handle_call(new, _From, State = #st{last = Last, 
