@@ -8,7 +8,7 @@
 -author('Joseph Abrahamson <me@jspha.com>').
 
 %% Public
--export([new/0, new/1, serialize/1, deserialize/1]).
+-export([new/0, new/1, serialize/1, deserialize/1, set_machine_id/1]).
 -export_type([uuid/0]).
 
 -behaviour(application).
@@ -86,6 +86,35 @@ serialize(UUID) -> base64:encode(UUID).
 deserialize(binary() | nonempty_string()) -> uuid().
 deserialize(Bin) when is_binary(Bin) -> base64:decode(Bin);
 deserialize(Str) when is_list(Str) -> base64:decode(list_to_binary(Str)).
+
+
+set_machine_id(MachineID) ->
+  set_machine_id(MachineID, normal).
+
+set_machine_id(MachineID, Name) ->
+  ServerPid = case find_nearest() of
+    Server ->
+      get_child_pid(Server, Name)
+  end,
+  gen_server:call(ServerPid, {set_machine_id, MachineID}).
+
+get_child_pid(Server, Name) ->
+  Children = supervisor:which_children(Server),
+  case lists:keyfind(Name, 1, Children) of
+    false -> 
+        start_snowstorm(Server, Name);
+    {Name, undefined, _, _} ->
+        error_logger:info_msg(
+          "Found a dead snowstorm, recreating it."),
+        _ = supervisor:delete_child(Server, Name),
+        start_snowstorm(Server, Name);
+    {Name, restarting, _, _} ->
+        error_logger:info_msg(
+          "Caught a restarting snowstorm. Waiting and trying again."),
+        timer:sleep(500),
+        get_child_pid(Server, Name);
+    {Name, Pid, _, _} -> Pid
+  end.
 
 %% -----------
 %% Private API

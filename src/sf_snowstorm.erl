@@ -41,7 +41,10 @@ init([Name]) ->
     {ok, MID} = application:get_env(machine_id),
     {ok, #st{name = Name, last = snowflake_now(),
 	     count = 0, machine = MID}}.
-    
+
+handle_call({set_machine_id, MachineId}, _From, State) ->
+    {noreply, ok, State#st{machine = MachineId}};
+
 handle_call(new, _From, State = #st{last = Last, 
 				    machine = MID, 
 				    count = Count}) ->
